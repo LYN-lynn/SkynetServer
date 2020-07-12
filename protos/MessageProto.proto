@@ -1,0 +1,54 @@
+// //执行方式 protoc --descriptor_set_out=GameMsg.pb MessageProto.proto
+syntax = "proto3";
+package MessageProto;
+
+// 所有消息的类型---
+
+// 所有消息中的MsgType就是该类型
+enum MessageType{
+  HOTFIX = 0;
+  LOGINREGIST = 1;
+  SCORE = 2;
+}
+// 所有消息作为此消息的MsgContent发送，消息类型依据MsgType区别再加解析---
+message Message{
+  MessageType MsgType = 1;
+  string Msg = 2;
+  // LoginRegistMsg LoginRegistMessage = 2;
+  // HotfixMsg HotfixMessage = 3;
+}
+
+// 登录------------------------------------------
+
+
+// 登录消息类型
+enum LoginRegistMsgType {
+  LOGIN = 0;
+  REGISETR = 1;
+}
+// 登陆消息主体
+message LoginRegistMsg{
+  LoginRegistMsgType MsgType = 1;
+  string Name = 2;
+  string PassWord = 3;
+}
+
+
+// 热更------------------------------------
+
+// 热更消息的类型
+enum HotfixMsgType {
+  C_ClientMD5 = 0;
+  S_DoNotNeedUpdate = 1;
+  S_NeedUpdate = 2;
+  S_UpdateFile = 3;
+}
+// 热更消息主体
+message HotfixMsg {
+  HotfixMsgType MsgType = 1;
+  string ClientMD5_C = 2;
+  bool NeedUpdate_S = 3;
+  string UpdateFilePath_S = 4;
+  string UpdateFileContent = 5;
+  bool UpdateAllFileFinished = 6;
+}
