@@ -1,7 +1,7 @@
 local snax = require "skynet.snax"
 local skynet = require "skynet"
 -- local socket = require "socket"
-local sockethelper = require "helper.sockethelper"
+local socketsendhelper = require "helper.socketsendhelper"
 local pbhelper = require "helper.protobufhelper"
 require "skynet.manager"
 
@@ -38,7 +38,7 @@ function this.dologin(connectid, connectaddress, loginstrmsg, testmsg)
     -- 序列化外壳消息
     local pbmsgtosend = pbhelper.createstrmsg(pbhelper.ProtoInfos.LOGINREGIST, loginbacktable)
     -- 打包，并发送
-    sockethelper.packsend(pbmsgtosend, connectid)
+    socketsendhelper.packsend(pbmsgtosend, connectid)
     -- 不关闭
     -- socket.close(connectid)
 end

@@ -7,7 +7,6 @@ local skynet = require "skynet"
 local socket = require "skynet.socket"
 local snax = require "skynet.snax"
 local pbhelper = require "helper.protobufhelper"
-local skhelper = require "helper.sockethelper"
 
 self.blacklist = require "blacklist"
 
@@ -37,13 +36,13 @@ function self.Acceptfunc(connsocketid, connectaddress)
                 return
             end
         end
-        skynet.fork(self.dipatchmsg, connsocketid, connectaddress)
+        skynet.fork(self.dispatchmsg, connsocketid, connectaddress)
     end)
 end
 
 -- 接收数据并解析出载体消息中保存到额正式信息的类型，然后将消息（str）发送给服务
 -- socket消息（头部+本体）；pb信息（载体消息(正式消息))---
-function self.dipatchmsg(connectsocketid, connectaddress)
+function self.dispatchmsg(connectsocketid, connectaddress)
     skynet.error("server 有新的连接 id=", connectsocketid, " IP=", connectaddress)
 
     socket.start(connectsocketid)
@@ -85,13 +84,6 @@ function self.dipatchmsg(connectsocketid, connectaddress)
             local dipatchtoservicename = pbhelper.ProtoInfos[msg.MsgType].servicename
             skynet.error("正式消息type=", msg.MsgType, "分发到服务", dipatchtoservicename)
             local servicectrl = snax.queryglobal(dipatchtoservicename)
-            -- local dloginmsg = pbhelper.Deserlize(pbhelper.ProtoInfos.MESSAGE, msg.Msg)
-            -- for k,v in pairs(dloginmsg) do
-            --     skynet.error(k,v)
-            -- end
-            -- skynet.error(dloginmsg.MsgType)
-            -- -- servicectrl.post.enter(connectsocketid, connectaddress, dloginmsg, msg)
-            -- -- test
             servicectrl.post.enter(connectsocketid, connectaddress, msg.Msg)
         end
     end

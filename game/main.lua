@@ -35,7 +35,6 @@ function self.StartAllService()
     local startservices = {
         "loginservice",
         "dipatchservice",
-        "hotfixservice"
     }
 
     for k,v in pairs(startservices) do
