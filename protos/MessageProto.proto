@@ -29,7 +29,11 @@ enum LoginRegistMsgType {
 // 登陆消息主体
 message LoginRegistMsg{
   LoginRegistMsgType MsgType = 1;
-  string Name = 2;
+  // 客户端：登录或注册昵称
+  // 服务端：登录或注册返回信息OK/NO
+  string Name = 2; 
+  // 客户端：登录或注册密码
+  // 服务端：登录或注册返回信息
   string PassWord = 3;
 }
 

@@ -1,11 +1,10 @@
 local snax = require "skynet.snax"
 local skynet = require "skynet"
--- local socket = require "socket"
 local socketsendhelper = require "helper.socketsendhelper"
 local pbhelper = require "helper.protobufhelper"
 require "skynet.manager"
 
-local this = {}
+local registedPlayer={}
 
 local accept = accept or {}
 
@@ -14,31 +13,112 @@ function init(sername, ...)
     snax.bind(snax.self(), "loginservice")
 end
 
-function accept.enter(connetctid, connectaddress, loginstrmsg)
-    -- 从PB消息载体获取正式消息，然后开启协程去处理这个登录
-    -- loginpbmsg 就是登录消息，str，需要解析
-    skynet.fork(this.dologin, connetctid, connectaddress, loginstrmsg)
-end
-
-function this.dologin(connectid, connectaddress, loginstrmsg, testmsg)
-    local loginpbmsg = pbhelper.Deserlize(pbhelper.ProtoInfos.LOGINREGIST, loginstrmsg)
-    local rmsg = nil
-    if loginpbmsg.Name == "lyn" and loginpbmsg.PassWord == "123" then
-        rmsg = "OK"
-    else
-        rmsg = "NO"
-    end
-    skynet.error("登录结果",rmsg)
+-- [[设置登录或注册的返回结果]]------------------------------------
+-- 返回一个序列化后的PB字符串
+local function getResponse(msgType, state, rspMsg)
     -- 正式消息表
     local loginbacktable = {}
-    loginbacktable.MsgType = "LOGIN"
-    loginbacktable.Name = rmsg
-    loginbacktable.PassWord = "true"
-
+    loginbacktable.MsgType = msgType
+    loginbacktable.Name = state
+    loginbacktable.PassWord = rspMsg
     -- 序列化外壳消息
-    local pbmsgtosend = pbhelper.createstrmsg(pbhelper.ProtoInfos.LOGINREGIST, loginbacktable)
+    return pbhelper.createstrmsg(pbhelper.ProtoInfos.LOGINREGIST, loginbacktable)
+end
+
+
+-- 登录和注册类型的区分标签
+local MSGTYPE = {
+    LOGIN="LOGIN", REGIST="REGIST"
+}
+
+-- [[注册相关]]----------------------
+-- 注册错误的类型
+local ENUM_RegistResult = {
+    ERR_NAMEREGISTED = "名称已被注册",
+    ERR_NAMETOOSHORT = "名称长度太短",
+    ERR_NAMETOOLONG = "名称长度太长",
+    ERR_PWDTOOSHORT = "密码太短",
+    ERR_PWDTOOLONG = "密码长",
+    SUCCED = "注册完成"
+}
+-- 注册条件
+local registCondition = {
+    NAMELEN = {MIN = 5, MAX = 15},
+    PWDLEN = {MIN = 5, MAX = 15},
+}
+-- 尝试注册
+local function tryRegist(newPlayerName, newPlayerPwd)
+    -- 检查名称长度
+    local rpsMsg = "not set value"
+    if #newPlayerName < registCondition.NAMELEN.MIN then
+        rpsMsg = ENUM_RegistResult.ERR_NAMETOOSHORT
+    end
+    if #newPlayerName > registCondition.NAMELEN.MAX then
+        rpsMsg = ENUM_RegistResult.ERR_NAMETOOLONG
+    end
+
+    -- 检查密码长度
+    if #newPlayerPwd < registCondition.PWDLEN.MIN then
+        rpsMsg = ENUM_RegistResult.ERR_PWDTOOSHORT
+    end
+    if #newPlayerPwd > registCondition.PWDLEN.MAX then
+        rpsMsg = ENUM_RegistResult.ERR_PWDTOOLONG
+    end
+
+    -- 检查是否已被注册
+    if registedPlayer[newPlayerName] ~= nil then
+        rpsMsg = ENUM_RegistResult.ERR_NAMEREGISTED
+    else
+        rpsMsg = ENUM_RegistResult.SUCCED
+        registedPlayer[newPlayerName] = newPlayerPwd
+    end
+
+    local state = rpsMsg==ENUM_RegistResult.SUCCED and "OK" or "NO"
+
+    -- 注册
+    skynet.error("注册处理", newPlayerName, newPlayerPwd, "处理结果", state, rpsMsg)
+    return getResponse(MSGTYPE.REGIST, state, rpsMsg)
+end
+
+
+-- [[登录相关]]-------------------------------
+local ENUM_LoginResult = {
+    ERR_ERROR = "用户名或密码错误",
+    SUCCED = "登录成功"
+}
+-- 尝试登录
+local function tryLogin(loginName, loginPwd)
+    local rspMsg = "not set value"
+    local state = "not set value"
+    if registedPlayer[loginName] == loginPwd then
+        state = "OK"
+        rspMsg = ENUM_LoginResult.SUCCED
+    else
+        state = "NO"
+        rspMsg = ENUM_LoginResult.ERR_ERROR
+    end
+    skynet.error("登录处理", loginName, loginPwd, "处理结果", state, rpsMsg)
+    return getResponse(MSGTYPE.LOGIN, state, rspMsg)
+end
+
+
+-- [[处理登录和注册的协程入口]]-------------------
+local function doLogin (connectid, connectaddress, loginstrmsg)
+    local loginPbMsg = pbhelper.Deserlize(pbhelper.ProtoInfos.LOGINREGIST, loginstrmsg)
+    local tryResult = "not set value"
+    if loginPbMsg.MsgType == MSGTYPE.LOGIN then
+        tryResult = tryLogin(loginPbMsg.Name, loginPbMsg.PassWord)
+    end
+    if loginPbMsg.MSGTYPE == MSGTYPE.REGIST then
+        tryResult = tryRegist(loginPbMsg.Name, loginPbMsg.PassWord)
+    end
     -- 打包，并发送
-    socketsendhelper.packsend(pbmsgtosend, connectid)
-    -- 不关闭
-    -- socket.close(connectid)
+    socketsendhelper.packsend(tryResult, connectid)
+end
+
+-- [[[[[[[[[该服务入口]]]]]]]]]
+function accept.enter(connetctid, connectaddress)
+    -- 从PB消息载体获取正式消息，然后开启协程去处理这个登录
+    -- loginpbmsg 就是登录消息，str，需要解析
+    skynet.fork(doLogin, connetctid, connectaddress)
 end
