@@ -1,6 +1,10 @@
 local skynet = require "skynet"
 local snax = require "skynet.snax"
 local socket = require "skynet.socket"
+local skynetSocketHelper = require "http.sockethelper"
+local httpd = require "http.httpd"
+local urlLib = require "http.url"
+
 
 local self = {}
 
@@ -10,24 +14,18 @@ local accept = accept or {}
 
 function init()
     local startCount = 1
-    skynet.error("Http服务启动...")
-
-    -- 启动多个热更处理的服务
-    for i=1,startCount do
-        table.insert( self.services, i, snax.newservice("hotfixservice", i))
-    end
-
-    local port = 9999
+    self.services = snax.newservice("hotfixservice")
+    
+    local port = 80
     local address = "172.16.214.62"
     local socketId = socket.listen(address, port)
     socket.start(socketId, self.AcceptFunc)
+    
+    skynet.error("Http服务启动，端口", port, "地址", address)
 end
 
-function self.AcceptFunc(sockeId, socketAddress)
-    skynet.fork(function()
-        self.services[1].post.enter(sockeId, socketAddress)
-    end)
-    socket.abandon(sockeId)
+function self.AcceptFunc(socketId, socketAddress)
+    self.services.post.enter(socketId, socketAddress)
 end
 
 

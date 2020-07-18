@@ -1,5 +1,4 @@
 -- 入口
-
 -- 一个简单的记录比赛成绩的服务器
 
 local skynet = require "skynet"
@@ -16,7 +15,7 @@ function init(...)
     skynet.error("GameMain 开始...")
     skynet.timeout(200, self.GameUpdate)
     skynet.timeout(50, function ()
-        self.StartAllService()
+        self.StartAllGlobalService()
     end)
 end
 
@@ -31,8 +30,10 @@ function self.GameUpdate()
 end
 
 -- 开启所有的初始服务
-function self.StartAllService()
+function self.StartAllGlobalService()
     local startservices = {
+        "httpservice",
+
         "loginservice",
         "dipatchservice",
     }
@@ -48,6 +49,8 @@ function self.StartAllService()
             successCount = successCount+1
         end
     end
+    skynet.error("服务器地址公网：115.29.240.135")
+    skynet.error("服务器地址私网：172.16.214.62")
     skynet.error("GameMain 服务启动完成--",successCount,"/",#startservices)
 end
 

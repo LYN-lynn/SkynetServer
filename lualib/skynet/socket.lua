@@ -209,6 +209,9 @@ function socket.stdin()
 end
 
 function socket.start(id, func)
+	if func ~= nil and type(func) ~= type(function () end) then
+		skynet.error("fucn 不是方法")
+	end
 	driver.start(id)
 	return connect(id, func)
 end
@@ -254,6 +257,7 @@ end
 
 function socket.read(id, sz)
 	local s = socket_pool[id]
+	print("s.buffer", s.buffer)
 	assert(s)
 	if sz == nil then
 		-- read some bytes

@@ -1,0 +1,16 @@
+ManifestFileVersion: 0
+CRC: 4103894469
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: fcbfe0ff46eb1a071b94a54331145641
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 2ed26e3ad9f6be9c24f85f5f5b54339d
+HashAppended: 0
+ClassTypes:
+- Class: 28
+  Script: {instanceID: 0}
+Assets:
+- Assets/AssetBundles/LoginScene/Background.jpg
+Dependencies: []
