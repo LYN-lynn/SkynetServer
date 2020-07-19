@@ -39,11 +39,7 @@ function self.packcarrier(packageinfo, mainmsgstr)
         return nil
     end
     local carriermsg = {}
-    skynet.error(type(packageinfo.msgtype))
     carriermsg.MsgType = packageinfo.msgtype
-    skynet.error(type(carriermsg.MsgType))
-    skynet.error(carriermsg.MsgType)
-
     carriermsg.Msg = mainmsgstr
     return carriermsg -- 返回打包使用的package参数+整个载体消息
 end
@@ -51,12 +47,17 @@ end
 function self.Serlize(packageinfo, content)
     skynet.error("序列化包名", packageinfo.package)
     local r = protobuf.encode(packageinfo.package, content)
+    skynet.error("序列化成功", packageinfo.package)
     return r
 end
 
 function self.Deserlize(packageinfo, content)
+    assert(packageinfo) 
+    assert(content)
     skynet.error("反序列化包名 ", packageinfo.package)
-    return protobuf.decode(packageinfo.package, content)
+    local r = protobuf.decode(packageinfo.package, content)
+    skynet.error("反序列化成功")
+    return r
 end
 
 -- 创建str消息-包括了序列化主要消息，创建载体消息并赋值主要消息，序列化载体消息

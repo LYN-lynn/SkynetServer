@@ -7,37 +7,25 @@ local skynet = require "skynet"
 local socket = require "skynet.socket"
 local snax = require "skynet.snax"
 local pbhelper = require "helper.protobufhelper"
-
-self.blacklist = require "blacklist"
+local blacklist = require "blacklist"
 
 function init ()
     -- 获取登录服务
     local address = "172.16.214.62"
-    local port = 8888
-    local socketid = socket.listen(address, port)
+    local port = 60006
     skynet.error("监听 ", address, "端口", port)
+    local socketid = socket.listen(address, port)
     assert(socketid)
     socket.start(socketid, self.Acceptfunc) -- 设置该id的socket在有连接时的回调（参数1：接入socketid，参数2：接入socket的地址IP）
 end
 
 function self.Acceptfunc(connsocketid, connectaddress)
-    skynet.fork(function ()
-        local connectip = string.sub( connectaddress, 1, string.find( connectaddress,":")-1)
-        for k,v in pairs(self.blacklist) do
-            if v[1] == connectip then
-                v[2] = v[2] + 1
-                socket.close(connsocketid)
-                skynet.error("黑名单拒绝ip", v[1], "已被拒绝次数", v[2])
-                skynet.error("黑名单列表====start")
-                for k,v in pairs(self.blacklist) do
-                    skynet.error("ip", v[1], "拒绝次数", v[2])
-                end
-                skynet.error("黑名单列表====over")
-                return
-            end
-        end
-        skynet.fork(self.dispatchmsg, connsocketid, connectaddress)
-    end)
+    skynet.error(connectaddress, "------------------------------");
+    local connectip = string.sub( connectaddress, 1, string.find( connectaddress,":")-1)
+    if not blacklist.canConnect(connectaddress) then
+        return;
+    end
+    skynet.fork(self.dispatchmsg, connsocketid, connectaddress)
 end
 
 -- 接收数据并解析出载体消息中保存到额正式信息的类型，然后将消息（str）发送给服务
@@ -50,7 +38,7 @@ function self.dispatchmsg(connectsocketid, connectaddress)
         local readsize = 20
         -- 阻塞读取长度信息 前20字节头部信息
         skynet.error("server 等待读取长度信息...")
-        local check, msg = socket.read(connectsocketid, readsize)
+        local check, _m = socket.read(connectsocketid, readsize)
         if check == false then
             break
         end

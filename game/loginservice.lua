@@ -28,7 +28,7 @@ end
 
 -- 登录和注册类型的区分标签
 local MSGTYPE = {
-    LOGIN="LOGIN", REGIST="REGIST"
+    LOGIN="LOGIN", REGISETR="REGISETR"
 }
 
 -- [[注册相关]]----------------------
@@ -49,7 +49,8 @@ local registCondition = {
 -- 尝试注册
 local function tryRegist(newPlayerName, newPlayerPwd)
     -- 检查名称长度
-    local rpsMsg = "not set value"
+    skynet.error("开始处理注册")
+    local rpsMsg = "not set value1"
     if #newPlayerName < registCondition.NAMELEN.MIN then
         rpsMsg = ENUM_RegistResult.ERR_NAMETOOSHORT
     end
@@ -73,7 +74,10 @@ local function tryRegist(newPlayerName, newPlayerPwd)
         registedPlayer[newPlayerName] = newPlayerPwd
     end
 
-    local state = rpsMsg==ENUM_RegistResult.SUCCED and "OK" or "NO"
+    local state = "NO"
+    if rpsMsg==ENUM_RegistResult.SUCCED then
+        state = "OK"
+    end
 
     -- 注册
     skynet.error("注册处理", newPlayerName, newPlayerPwd, "处理结果", state, rpsMsg)
@@ -88,6 +92,7 @@ local ENUM_LoginResult = {
 }
 -- 尝试登录
 local function tryLogin(loginName, loginPwd)
+    skynet.error("开始处理登录")
     local rspMsg = "not set value"
     local state = "not set value"
     if registedPlayer[loginName] == loginPwd then
@@ -97,28 +102,30 @@ local function tryLogin(loginName, loginPwd)
         state = "NO"
         rspMsg = ENUM_LoginResult.ERR_ERROR
     end
-    skynet.error("登录处理", loginName, loginPwd, "处理结果", state, rpsMsg)
+    skynet.error("登录处理", loginName, loginPwd, "处理结果", state)
     return getResponse(MSGTYPE.LOGIN, state, rspMsg)
 end
 
 
 -- [[处理登录和注册的协程入口]]-------------------
-local function doLogin (connectid, connectaddress, loginstrmsg)
-    local loginPbMsg = pbhelper.Deserlize(pbhelper.ProtoInfos.LOGINREGIST, loginstrmsg)
+local function doLogin (connectId, connectaddress, loginStrMsg)
+    local loginPbMsg = pbhelper.Deserlize(pbhelper.ProtoInfos.LOGINREGIST, loginStrMsg)
     local tryResult = "not set value"
     if loginPbMsg.MsgType == MSGTYPE.LOGIN then
         tryResult = tryLogin(loginPbMsg.Name, loginPbMsg.PassWord)
-    end
-    if loginPbMsg.MSGTYPE == MSGTYPE.REGIST then
+    elseif loginPbMsg.MsgType == MSGTYPE.REGISETR then
         tryResult = tryRegist(loginPbMsg.Name, loginPbMsg.PassWord)
+    else
+        skynet.error("无法识别的登录/注册消息 --", loginPbMsg.MsgType)
     end
     -- 打包，并发送
-    socketsendhelper.packsend(tryResult, connectid)
+    socketsendhelper.packsend(tryResult, connectId)
 end
 
 -- [[[[[[[[[该服务入口]]]]]]]]]
-function accept.enter(connetctid, connectaddress)
+function accept.enter(connetctid, connectaddress, msg)
     -- 从PB消息载体获取正式消息，然后开启协程去处理这个登录
     -- loginpbmsg 就是登录消息，str，需要解析
-    skynet.fork(doLogin, connetctid, connectaddress)
+    assert(connetctid) assert(connectaddress)
+    skynet.fork(doLogin, connetctid, connectaddress, msg)
 end

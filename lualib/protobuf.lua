@@ -461,6 +461,7 @@ end
 
 function M.decode(typename, buffer, length)
 	local ret = {}
+	-- print(P, decode_message_cb , ret , typename, buffer, length)
 	local ok = c._decode(P, decode_message_cb , ret , typename, buffer, length)
 	if ok then
 		return setmetatable(ret , default_table(typename))
