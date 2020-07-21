@@ -2,6 +2,7 @@ local snax = require "skynet.snax"
 local skynet = require "skynet"
 local socketsendhelper = require "helper.socketsendhelper"
 local pbhelper = require "helper.protobufhelper"
+local loginProto = require "helper.protos.login"
 require "skynet.manager"
 
 local registedPlayer={}
@@ -16,6 +17,7 @@ end
 -- [[设置登录或注册的返回结果]]------------------------------------
 -- 返回一个序列化后的PB字符串
 local function getResponse(msgType, state, rspMsg)
+    assert(msgType) assert(state) assert(rspMsg)
     -- 正式消息表
     local loginbacktable = {}
     loginbacktable.MsgType = msgType
@@ -26,70 +28,70 @@ local function getResponse(msgType, state, rspMsg)
 end
 
 
--- 登录和注册类型的区分标签
-local MSGTYPE = {
-    LOGIN="LOGIN", REGISETR="REGISETR"
-}
+-- -- 登录和注册类型的区分标签
+-- local ENUM_MSGTYPE = {
+--     LOGIN="LOGIN", REGISETR="REGISETR"
+-- }
 
--- [[注册相关]]----------------------
--- 注册错误的类型
-local ENUM_RegistResult = {
-    ERR_NAMEREGISTED = "名称已被注册",
-    ERR_NAMETOOSHORT = "名称长度太短",
-    ERR_NAMETOOLONG = "名称长度太长",
-    ERR_PWDTOOSHORT = "密码太短",
-    ERR_PWDTOOLONG = "密码长",
-    SUCCED = "注册完成"
-}
--- 注册条件
-local registCondition = {
-    NAMELEN = {MIN = 5, MAX = 15},
-    PWDLEN = {MIN = 5, MAX = 15},
-}
+-- -- [[注册相关]]----------------------
+-- -- 注册错误的类型
+-- local ENUM_RegistResult = {
+--     ERR_NAMEREGISTED = "名称已被注册",
+--     ERR_NAMETOOSHORT = "名称长度太短",
+--     ERR_NAMETOOLONG = "名称长度太长",
+--     ERR_PWDTOOSHORT = "密码太短",
+--     ERR_PWDTOOLONG = "密码长",
+--     SUCCED = "注册完成"
+-- }
+-- -- 注册条件
+-- local ENUM_RegistCondition = {
+--     NAMELEN = {MIN = 5, MAX = 15},
+--     PWDLEN = {MIN = 5, MAX = 15},
+-- }
 -- 尝试注册
 local function tryRegist(newPlayerName, newPlayerPwd)
     -- 检查名称长度
     skynet.error("开始处理注册")
     local rpsMsg = "not set value1"
-    if #newPlayerName < registCondition.NAMELEN.MIN then
-        rpsMsg = ENUM_RegistResult.ERR_NAMETOOSHORT
+    if #newPlayerName < loginProto.ENUM_RegistCondition.NAMELEN.MIN then
+        rpsMsg = loginProto.ENUM_RegistResult.ERR_NAMETOOSHORT
     end
-    if #newPlayerName > registCondition.NAMELEN.MAX then
-        rpsMsg = ENUM_RegistResult.ERR_NAMETOOLONG
+    if #newPlayerName > loginProto.ENUM_RegistCondition.NAMELEN.MAX then
+        rpsMsg = loginProto.ENUM_RegistResult.ERR_NAMETOOLONG
     end
 
     -- 检查密码长度
-    if #newPlayerPwd < registCondition.PWDLEN.MIN then
-        rpsMsg = ENUM_RegistResult.ERR_PWDTOOSHORT
+    if #newPlayerPwd < loginProto.ENUM_RegistCondition.PWDLEN.MIN then
+        rpsMsg = loginProto.ENUM_RegistResult.ERR_PWDTOOSHORT
     end
-    if #newPlayerPwd > registCondition.PWDLEN.MAX then
-        rpsMsg = ENUM_RegistResult.ERR_PWDTOOLONG
+    if #newPlayerPwd > loginProto.ENUM_RegistCondition.PWDLEN.MAX then
+        rpsMsg = loginProto.ENUM_RegistResult.ERR_PWDTOOLONG
     end
 
     -- 检查是否已被注册
     if registedPlayer[newPlayerName] ~= nil then
-        rpsMsg = ENUM_RegistResult.ERR_NAMEREGISTED
+        rpsMsg = loginProto.ENUM_RegistResult.ERR_NAMEREGISTED
     else
-        rpsMsg = ENUM_RegistResult.SUCCED
+        rpsMsg = loginProto.ENUM_RegistResult.SUCCED
         registedPlayer[newPlayerName] = newPlayerPwd
     end
 
     local state = "NO"
-    if rpsMsg==ENUM_RegistResult.SUCCED then
+    if rpsMsg==loginProto.ENUM_RegistResult.SUCCED then
         state = "OK"
     end
 
     -- 注册
     skynet.error("注册处理", newPlayerName, newPlayerPwd, "处理结果", state, rpsMsg)
-    return getResponse(MSGTYPE.REGIST, state, rpsMsg)
+    return getResponse(loginProto.ENUM_MSGTYPE.REGISETR, state, rpsMsg)
 end
 
 
--- [[登录相关]]-------------------------------
-local ENUM_LoginResult = {
-    ERR_ERROR = "用户名或密码错误",
-    SUCCED = "登录成功"
-}
+-- -- [[登录相关]]-------------------------------
+-- local ENUM_LoginResult = {
+--     ERR_ERROR = "用户名或密码错误",
+--     SUCCED = "登录成功"
+-- }
 -- 尝试登录
 local function tryLogin(loginName, loginPwd)
     skynet.error("开始处理登录")
@@ -97,13 +99,13 @@ local function tryLogin(loginName, loginPwd)
     local state = "not set value"
     if registedPlayer[loginName] == loginPwd then
         state = "OK"
-        rspMsg = ENUM_LoginResult.SUCCED
+        rspMsg = loginProto.ENUM_LoginResult.SUCCED
     else
         state = "NO"
-        rspMsg = ENUM_LoginResult.ERR_ERROR
+        rspMsg = loginProto.ENUM_LoginResult.ERR_ERROR
     end
     skynet.error("登录处理", loginName, loginPwd, "处理结果", state)
-    return getResponse(MSGTYPE.LOGIN, state, rspMsg)
+    return getResponse(loginProto.ENUM_MSGTYPE.LOGIN, state, rspMsg)
 end
 
 
@@ -111,9 +113,9 @@ end
 local function doLogin (connectId, connectaddress, loginStrMsg)
     local loginPbMsg = pbhelper.Deserlize(pbhelper.ProtoInfos.LOGINREGIST, loginStrMsg)
     local tryResult = "not set value"
-    if loginPbMsg.MsgType == MSGTYPE.LOGIN then
+    if loginPbMsg.MsgType == loginProto.ENUM_MSGTYPE.LOGIN then
         tryResult = tryLogin(loginPbMsg.Name, loginPbMsg.PassWord)
-    elseif loginPbMsg.MsgType == MSGTYPE.REGISETR then
+    elseif loginPbMsg.MsgType == loginProto.ENUM_MSGTYPE.REGISETR then
         tryResult = tryRegist(loginPbMsg.Name, loginPbMsg.PassWord)
     else
         skynet.error("无法识别的登录/注册消息 --", loginPbMsg.MsgType)

@@ -55,12 +55,12 @@ end
 
 -- 处理http请求，返回请求的文件
 function self.doHttpRequest(socketId, socketAddress)
-    local code, url, method, header, body  = httpd.read_request(skynetSocketHelper.readfunc(socketId), 8192)
+    local code, url, method, header, body = httpd.read_request(skynetSocketHelper.readfunc(socketId), 8192)
     skynet.error("输出http请求解析结果")
-    skynet.error("code=", code)     -- nil
-    skynet.error("url", url)        -- url ./lualib/skynet/socket.lua:261: Need buffer object at param 1
-    skynet.error("header", header)  -- nil
-    skynet.error("bdoy", body)      -- nil
+    skynet.error("code=", code)
+    skynet.error("url", url)
+    skynet.error("header", header)
+    skynet.error("bdoy",body)
 
     skynet.error("解析结果：", code)
     if code ~= 200 then
@@ -69,7 +69,7 @@ function self.doHttpRequest(socketId, socketAddress)
         return false
     end
     skynet.error("解析成功，来自", socketAddress)
-    
+
     local path, query = urlLib.parse(url)
     skynet.error("解析url")
     skynet.error(path,query)
@@ -79,6 +79,10 @@ function self.doHttpRequest(socketId, socketAddress)
         skynet.error("路径太短")
         return  false;
     end
+    if string.find( path,"..", 1, true) ~= nil then -- true 关闭匹配模式
+        skynet.error("不能包含..的路径", path)
+        return false
+    end
     local fd = io.open(targetAssetPath, "r")
     if fd == nil then
         skynet.error("请求资源", targetAssetPath, "不存在")
@@ -86,10 +90,4 @@ function self.doHttpRequest(socketId, socketAddress)
     end
     local assetContent = fd:read("*a")
     return true, assetContent
-end
-
--- 发送文件内容
-function self.sendfile(socketid, filepath)
-    local fd = assert(io.open(filepath, "r"))
-    local conetnt = fd:read("*all")
 end

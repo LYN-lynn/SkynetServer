@@ -32,7 +32,6 @@ function self.AcceptFunc(socketId, socketAddress)
     self.services.post.enter(socketId, socketAddress)
 end
 
-
 function accept.quit()
     for i=1,10 do
         self.services[i].post.quit()

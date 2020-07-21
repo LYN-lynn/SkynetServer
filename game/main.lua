@@ -1,9 +1,7 @@
 -- 入口
--- 一个简单的记录比赛成绩的服务器
 
 local skynet = require "skynet"
 local snax = require "skynet.snax"
--- package.path = package.path .. ";./game/?.lua"
 require "skynet.manager"
 
 local self = {}
